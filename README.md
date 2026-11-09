@@ -18,7 +18,7 @@ stack into whatever dimension order a user asked for. That is what this port
 compiles into a single Mojo gather.
 
 **And it is slower than NumPy. The benchmark below reports 0/7 cases at or
-above NumPy, geometric mean 0.37x.** That is a real loss and it is discussed in
+above NumPy, geometric mean 0.35x.** That is a real loss and it is discussed in
 [Benchmarks](#benchmarks), not buried.
 
 ---
@@ -181,14 +181,14 @@ upstream's actual behaviour the gap is wider still.
 
 | case | Mojo | NumPy | speedup |
 | --- | ---: | ---: | ---: |
-| `CZYX -> BSTCZYX` reorder, uint16 2x3x512x512 | 1.23 ms | 0.25 ms | **0.21x** |
-| `CZYX -> ZYXC` reorder, uint8 2x3x1024x1024 | 46.49 ms | 36.01 ms | **0.77x** |
-| 5D `SCTYZ -> SZCTY`, uint16 64x2x3x128x128 | 42.39 ms | 12.06 ms | **0.28x** |
-| strided `Z` selection, uint16 64x3x256x256 | 6.94 ms | 4.45 ms | **0.64x** |
-| list `Z` selection, uint16 64x3x256x256 | 1.55 ms | 0.66 ms | **0.43x** |
-| drop a `Z` plane and reorder, uint16 64x3x256x256 | 0.35 ms | 0.05 ms | **0.14x** |
-| reverse `C` order, float32 2x3x512x512 | 12.60 ms | 6.44 ms | **0.51x** |
-| **geometric mean** | | | **0.37x** |
+| `CZYX -> BSTCZYX` reorder, uint16 2x3x512x512 | 0.95 ms | 0.23 ms | **0.24x** |
+| `CZYX -> ZYXC` reorder, uint8 2x3x1024x1024 | 32.89 ms | 19.96 ms | **0.61x** |
+| 5D `SCTYZ -> SZCTY`, uint16 64x2x3x128x128 | 28.33 ms | 7.63 ms | **0.27x** |
+| strided `Z` selection, uint16 64x3x256x256 | 3.73 ms | 1.31 ms | **0.35x** |
+| list `Z` selection, uint16 64x3x256x256 | 0.89 ms | 0.56 ms | **0.63x** |
+| drop a `Z` plane and reorder, uint16 64x3x256x256 | 0.21 ms | 0.03 ms | **0.16x** |
+| reverse `C` order, float32 2x3x512x512 | 7.50 ms | 3.40 ms | **0.45x** |
+| **geometric mean** | | | **0.35x** |
 
 **0 of 7 cases reach NumPy.** This port is a loss and there is no way to read
 that table otherwise.
@@ -201,7 +201,7 @@ Why:
   amount of tidying the inner loop changes that.
 * The two obvious wins were taken and are visible in the numbers: the
   contiguous-run path lifted the `CZYX -> BSTCZYX` case from 12.79 ms to
-  1.23 ms, and the per-width specialisation was needed because the width test
+  0.95 ms, and the per-width specialisation was needed because the width test
   itself was blocking vectorisation. Neither closes the gap, because NumPy is
   not doing the naive thing either.
 * The remaining gap would need cache blocking for the transposing cases (the
