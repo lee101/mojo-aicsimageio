@@ -63,6 +63,16 @@ def _slice_indices(spec, n):
 def _list_indices(values, n, axis):
     out = []
     for v in values:
+        # Matches aicsimageio.transforms.reshape_data: a non-integer index
+        # reaches NumPy's getitem, which rejects it with IndexError.
+        if isinstance(v, bool):
+            v = int(v)
+        elif not isinstance(v, int):
+            raise IndexError(
+                "only integers, slices (`:`), ellipsis (`...`), "
+                "numpy.newaxis (`None`) and integer or boolean arrays are "
+                "valid indices"
+            )
         j = v + n if v < 0 else v
         if j < 0 or j >= n:
             raise IndexError(
@@ -192,11 +202,10 @@ def reshape_data(data, given_dims, return_dims, **kwargs):
     src_base = 0
     for dim in given_dims:
         dim_index = given_dims.index(dim)
-        # Upstream leaves this unbound for a spec that is neither an int, a
-        # list/tuple/range nor a slice, and dies with UnboundLocalError. The
-        # zero default keeps that path unreachable rather than papering over
-        # a check that would then be skipped silently.
-        check_selection_max = 0
+        # Matches aicsimageio.transforms.reshape_data: a spec that is neither
+        # an int, a list/tuple/range nor a slice leaves check_selection_max
+        # unbound upstream and dies with UnboundLocalError. Mirror that here.
+        check_selection_max = None
         advanced = False
         if dim in return_dims:
             if dim in kwargs:
@@ -231,6 +240,12 @@ def reshape_data(data, given_dims, return_dims, **kwargs):
                 check_selection_max = 0
             new_dims = new_dims.replace(dim, "")
 
+        if check_selection_max is None:
+            raise UnboundLocalError(
+                "cannot access local variable 'check_selection_max' "
+                "where it is not associated with a value"
+            )
+
         if check_selection_max > data.shape[dim_index]:
             raise IndexError(
                 f"Dimension specified with {dim}={display_dim_spec} "
@@ -260,6 +275,20 @@ def reshape_data(data, given_dims, return_dims, **kwargs):
         if dim not in given_dims:
             new_dims = f"{new_dims[:i]}{dim}{new_dims[i:]}"
             sel.insert(i, (1, [np.zeros(1, dtype=np.int64)]))
+
+    # Matches aicsimageio.transforms.reshape_data's final
+    # transpose_to_dims(data, given_dims=new_dims, return_dims=return_dims)
+    # tail: the Counter check (and max() on an empty string) runs before
+    # any transpose is attempted. This is what makes duplicate dims raise
+    # ConflictingArgumentsError and a 0-d result raise ValueError.
+    if (
+        Counter(new_dims) != Counter(return_dims)
+        or max(Counter(new_dims).values()) > 1
+    ):
+        raise ConflictingArgumentsError(
+            f"given_dims={new_dims} and return_dims={return_dims} "
+            "are incompatible."
+        )
 
     transposer = [new_dims.find(dim) for dim in return_dims]
     if len(transposer) != len(sel):

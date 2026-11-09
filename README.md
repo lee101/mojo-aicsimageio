@@ -119,7 +119,7 @@ plane.shape            # (8, 8, 4)
 ## Tests
 
 ```
-119 passed
+168 passed
 ```
 
 Two files:
@@ -132,18 +132,24 @@ Two files:
   one entry short is zero-filled, truncates a 64-bit address, and passes every
   small-array test before segfaulting.
 * `tests/test_transforms.py` — parity against the real
-  `aicsimageio.transforms`. 27 transform cases and 10 error cases, each
-  compared for result *and* for exception type.
+  `aicsimageio.transforms`. 40 transform cases and 16 error cases, each
+  compared for result *and* for exception type, plus dedicated degenerate-input
+  tests (empty / one-element / duplicate dims / NaN/inf with `rtol=1e-6,
+  atol=1e-6` written in the test / mismatched shapes) that compare against
+  upstream aicsimageio 4.14.0 `transforms.py` (`reshape_data` lines 173-274,
+  `transpose_to_dims` lines 64-81, `reduce_to_slice` lines 19-32) directly.
 
 `aicsimageio` is not in the shared test venv, so `tests/reference.py` resolves
 it in this order: already installed, then an extraction cached in
 `tests/.refcache/`, then a fresh wheel download from PyPI. The extracted
-copy's top-level `__init__.py` is emptied, because `aicsimageio.transforms`
-needs only `dask`, `numpy`, `xarray` and the package's own `types`,
-`exceptions`, `dimensions` and `image_container` modules — not the long tail of
-optional readers. On failure of all three routes the suite falls back to an
-independent NumPy reference in `_numpy_reshape`, which is **exercised on every
-run regardless**, so a green suite never depends on the download succeeding.
+copy's top-level `__init__.py` is emptied, and `dask`/`xarray` are stubbed
+when absent, because `aicsimageio.transforms` needs only `numpy` and the
+package's own `types`, `exceptions`, `dimensions` and `image_container`
+modules — not the long tail of optional readers, and none of `dask`/`xarray`
+is ever called by the dimension engine. On failure of all three routes the
+suite falls back to an independent NumPy reference in `_numpy_reshape`, which
+is **exercised on every run regardless**, so a green suite never depends on
+the download succeeding.
 `test_reference_kind_is_reported` prints which reference was live; in the
 recorded run it was `wheel`, i.e. real upstream.
 

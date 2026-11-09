@@ -22,6 +22,7 @@ import json
 import os
 import pathlib
 import sys
+import types as _types
 import urllib.request
 import zipfile
 
@@ -29,7 +30,46 @@ _ROOT = pathlib.Path(__file__).resolve().parents[1]
 _CACHE = pathlib.Path(__file__).resolve().parent / ".refcache"
 
 
+class _StubModule(_types.ModuleType):
+    """Stand-in for `dask` / `xarray` so `aicsimageio.transforms` imports.
+
+    `transforms.py` only touches `dask`/`xarray` for type annotations and the
+    `generate_stack` helper (which needs `da.stack` / `xr.DataArray`). The
+    dimension engine itself (`reshape_data`, `transpose_to_dims`,
+    `reduce_to_slice`) never calls them. Without this stub the import in
+    `_import_transforms` fails with `ModuleNotFoundError: dask` in a venv that
+    has neither, and the suite silently falls back to the analytic NumPy
+    reference instead of real upstream parity.
+    """
+
+    def __getattr__(self, name):
+        cls = type(f"_Stub_{name}", (), {})
+        setattr(self, name, cls)
+        return cls
+
+
+def _stub_heavy_deps():
+    for name in ("dask", "dask.array", "xarray"):
+        if name in sys.modules:
+            _existing = sys.modules[name]
+            # A partially-initialised stub from a previous call may need
+            # the `dask.array` attribute wired up (see below).
+            if name != "dask":
+                continue
+        try:
+            __import__(name)
+        except (ImportError, TypeError):
+            sys.modules[name] = _StubModule(name)
+    # `dask.array` must be reachable as `dask.array` attribute for `import dask.array`.
+    if "dask" in sys.modules and "dask.array" in sys.modules:
+        try:
+            sys.modules["dask"].array = sys.modules["dask.array"]
+        except Exception:
+            pass
+
+
 def _import_transforms():
+    _stub_heavy_deps()
     try:
         from aicsimageio import transforms  # noqa: PLC0415
     except Exception:
