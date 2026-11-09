@@ -18,7 +18,7 @@ stack into whatever dimension order a user asked for. That is what this port
 compiles into a single Mojo gather.
 
 **And it is slower than NumPy. The benchmark below reports 0/7 cases at or
-above NumPy, geometric mean 0.35x.** That is a real loss and it is discussed in
+above NumPy, geometric mean 0.34x.** That is a real loss and it is discussed in
 [Benchmarks](#benchmarks), not buried.
 
 ---
@@ -181,14 +181,14 @@ upstream's actual behaviour the gap is wider still.
 
 | case | Mojo | NumPy | speedup |
 | --- | ---: | ---: | ---: |
-| `CZYX -> BSTCZYX` reorder, uint16 2x3x512x512 | 0.95 ms | 0.23 ms | **0.24x** |
-| `CZYX -> ZYXC` reorder, uint8 2x3x1024x1024 | 32.89 ms | 19.96 ms | **0.61x** |
-| 5D `SCTYZ -> SZCTY`, uint16 64x2x3x128x128 | 28.33 ms | 7.63 ms | **0.27x** |
-| strided `Z` selection, uint16 64x3x256x256 | 3.73 ms | 1.31 ms | **0.35x** |
-| list `Z` selection, uint16 64x3x256x256 | 0.89 ms | 0.56 ms | **0.63x** |
-| drop a `Z` plane and reorder, uint16 64x3x256x256 | 0.21 ms | 0.03 ms | **0.16x** |
-| reverse `C` order, float32 2x3x512x512 | 7.50 ms | 3.40 ms | **0.45x** |
-| **geometric mean** | | | **0.35x** |
+| `CZYX -> BSTCZYX` reorder, uint16 2x3x512x512 | 0.95 ms | 0.22 ms | **0.24x** |
+| `CZYX -> ZYXC` reorder, uint8 2x3x1024x1024 | 31.91 ms | 20.58 ms | **0.65x** |
+| 5D `SCTYZ -> SZCTY`, uint16 64x2x3x128x128 | 27.37 ms | 7.21 ms | **0.26x** |
+| strided `Z` selection, uint16 64x3x256x256 | 3.46 ms | 1.14 ms | **0.33x** |
+| list `Z` selection, uint16 64x3x256x256 | 0.92 ms | 0.51 ms | **0.55x** |
+| drop a `Z` plane and reorder, uint16 64x3x256x256 | 0.22 ms | 0.03 ms | **0.16x** |
+| reverse `C` order, float32 2x3x512x512 | 7.43 ms | 3.44 ms | **0.46x** |
+| **geometric mean** | | | **0.34x** |
 
 **0 of 7 cases reach NumPy.** This port is a loss and there is no way to read
 that table otherwise.
